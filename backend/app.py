@@ -16,7 +16,11 @@ logger = logging.getLogger("app")
 # ==================== KONFIG ====================
 SERIAL_PORT = os.environ.get("SERIAL_PORT", "COM3")   # Windows: "COM5"
 SERIAL_BAUD = int(os.environ.get("SERIAL_BAUD", "115200"))
-BIN_HEIGHT_CM = float(os.environ.get("BIN_HEIGHT_CM", "30"))   # tinggi bin dari sensor ke dasar
+# Kalibrasi sensor HC-SR04 kepenuhan bin:
+#   BIN_EMPTY_CM = jarak sensor->sampah saat bin KOSONG (mentok fisik di dalam bin)  -> 0%
+#   BIN_FULL_CM  = jarak sensor->sampah saat bin PENUH (harus sama dgn FULL_THRESHOLD_CM di firmware) -> 100%
+BIN_EMPTY_CM = float(os.environ.get("BIN_EMPTY_CM", "15"))
+BIN_FULL_CM = float(os.environ.get("BIN_FULL_CM", "3"))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "smartbin.db")
 
@@ -25,8 +29,40 @@ app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DB_PATH}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 
+def _run_light_migrations():
+    """Tambah kolom yang hilang di tabel-tabel existing (SQLite ALTER TABLE ADD COLUMN).
+
+    db.create_all() HANYA membuat tabel yang belum ada - kalau tabel sudah ada
+    tapi modelnya nambah kolom baru (mis. 'raw_label'), create_all() tidak akan
+    otomatis menambahkannya. Ini migrasi ringan untuk kasus itu, supaya tidak
+    perlu hapus file .db manual tiap ada perubahan skema kecil.
+    """
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(db.engine)
+
+    # (nama_tabel, [(nama_kolom, definisi_sql), ...])
+    expected_columns = {
+        "detections": [
+            ("raw_label", "VARCHAR(50)"),
+        ],
+    }
+
+    for table_name, columns in expected_columns.items():
+        if table_name not in inspector.get_table_names():
+            continue  # tabel baru akan dibuat lengkap oleh create_all()
+
+        existing_cols = {c["name"] for c in inspector.get_columns(table_name)}
+        for col_name, col_def in columns:
+            if col_name not in existing_cols:
+                logger.warning(f"Migrasi: menambah kolom '{col_name}' ke tabel '{table_name}'")
+                with db.engine.begin() as conn:
+                    conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_def}"))
+
+
 with app.app_context():
     db.create_all()
+    _run_light_migrations()
 
 detector = Detector()
 detector.start()   # buka kamera SEKALI & mulai streaming background (dipakai juga oleh /video_feed)
@@ -45,10 +81,15 @@ latest_state = {
 # ==================== CALLBACK SERIAL ====================
 
 def _level_to_percent(cm):
-    """Konversi jarak sensor (cm, makin kecil = makin penuh) jadi persentase kapasitas."""
+    """Konversi jarak sensor (cm) jadi persentase kapasitas, dikalibrasi dengan
+    kondisi fisik bin: BIN_EMPTY_CM (mentok kosong) = 0%, BIN_FULL_CM = 100%.
+    """
     if cm is None or cm < 0:
         return None
-    pct = 100 - (cm / BIN_HEIGHT_CM * 100)
+    span = BIN_EMPTY_CM - BIN_FULL_CM
+    if span <= 0:
+        return None
+    pct = (BIN_EMPTY_CM - cm) / span * 100
     return max(0, min(100, round(pct, 1)))
 
 
@@ -67,8 +108,12 @@ def handle_capture():
 
     PENTING: tidak ada fallback/default classification. Kalau YOLO tidak
     menemukan objek dengan confidence >= threshold, backend mengirim
-    'UNKNOWN' ke ESP32 - servo TIDAK digerakkan sama sekali, supaya sampah
-    tidak salah masuk bin.
+    'UNKNOWN' ke ESP32 (servo TIDAK digerakkan) TANPA menyimpan apapun ke
+    database - tidak ada foto tersimpan, tidak ada baris riwayat, tidak ada
+    notifikasi. Ini murni supaya sampah tidak salah masuk bin; bukan
+    kejadian yang perlu dicatat/di-notif setiap saat karena bisa sangat
+    sering terjadi (mis. saat sensor masuk trigger tapi belum ada objek
+    stabil di depan kamera).
     """
     logger.info("Menerima sinyal CAPTURE, menjalankan YOLO...")
     with app.app_context():
@@ -77,29 +122,20 @@ def handle_capture():
             classification = result["classification"]
 
             if classification is None:
-                logger.warning(
+                logger.info(
                     f"Tidak ada objek dengan confidence memadai "
-                    f"(terbaik: {result['confidence']:.2f}), servo TIDAK digerakkan"
+                    f"(terbaik: {result['confidence']:.2f}), servo tidak digerakkan - tidak dicatat"
                 )
-                det = Detection(
-                    classification="UNKNOWN",
-                    raw_label=result["raw_label"],
-                    confidence=result["confidence"],
-                    image_path=result["image_path"],
-                    servo_status="SKIPPED",
-                )
-                db.session.add(det)
-                db.session.commit()
-
-                log_event("WARNING", "Objek tidak terklasifikasi dengan yakin, servo tidak digerakkan")
                 worker.send_result("UNKNOWN")
                 return
+
+            image_path = detector.save_capture(result["_annotated_frame"])
 
             det = Detection(
                 classification=classification,
                 raw_label=result["raw_label"],
                 confidence=result["confidence"],
-                image_path=result["image_path"],
+                image_path=image_path,
             )
             db.session.add(det)
             db.session.commit()

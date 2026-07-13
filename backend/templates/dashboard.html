@@ -39,7 +39,8 @@
   .pill.offline { background: var(--danger-bg); color: var(--danger); }
   .pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
   .bell { position: relative; width: 38px; height: 38px; border-radius: 50%; background: #fff; border: 1px solid var(--border);
-          display: flex; align-items: center; justify-content: center; font-size: 16px; }
+          display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; }
+  .bell:hover { background: #f7f8fb; }
   .bell .badge { position: absolute; top: -4px; right: -4px; background: var(--danger); color: #fff; font-size: 11px;
                  font-weight: 700; border-radius: 999px; padding: 1px 6px; }
   .profile { display: flex; align-items: center; gap: 8px; }
@@ -59,7 +60,7 @@
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 22px; }
   .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
   .card-head .left { display: flex; align-items: center; gap: 10px; }
-  .icon-box { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .icon-box { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink:0; }
   .icon-box.g { background: var(--organic-bg); color: var(--organic); }
   .icon-box.b { background: var(--nonorganic-bg); color: var(--nonorganic); }
   .icon-box.p { background: var(--purple-bg); color: var(--purple); }
@@ -74,7 +75,7 @@
   .status-tag.Aman { background: var(--organic-bg); color: var(--organic); }
   .status-tag.Sedang { background: var(--warn-bg); color: var(--warn); }
   .status-tag.Penuh { background: var(--danger-bg); color: var(--danger); }
-  .status-tag[data-s="Tidak diketahui"] { background: #f0f1f5; color: var(--muted); }
+  .status-tag.Tidak_diketahui { background: #f0f1f5; color: var(--muted); }
 
   .bar-track { height: 10px; background: #eef0f4; border-radius: 999px; overflow: hidden; display: flex; align-items: center; gap: 8px; }
   .bar-track .fill { height: 100%; border-radius: 999px; transition: width .4s; }
@@ -88,11 +89,11 @@
                     font-size: 20px; font-weight: 700; color: var(--purple); }
 
   /* ---------- Chart card ---------- */
-  .chart-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .chart-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
   .legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); margin-right: 14px; }
   .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
   .time-pill { background: var(--organic); color: #fff; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 999px; }
-  canvas#capacityChart { max-height: 260px; }
+  .chart-box { position: relative; height: 260px; width: 100%; }
 
   /* ---------- Status realtime & peringatan ---------- */
   .status-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
@@ -111,10 +112,11 @@
   .alert-box.safe { background: var(--organic-bg); border-color: #bfe9cf; }
   .alert-box.safe .title, .alert-box.safe .msg { color: #1b7a45; }
 
-  /* ---------- Live camera ---------- */
+  /* ---------- Live camera (diperkecil, tidak full width) ---------- */
+  .camera-card { max-width: 420px; }
   .camera-frame { width: 100%; border-radius: 12px; background: #0c0e14; display: block; aspect-ratio: 4/3; object-fit: cover; }
-  .camera-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; font-size: 13px; color: var(--muted); }
-  .live-dot { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--danger); }
+  .camera-footer { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .live-dot { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--danger); font-size: 12px; }
   .live-dot span.d { width: 7px; height: 7px; border-radius: 50%; background: var(--danger); animation: pulse 1.4s infinite; }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
   .conf-badge { font-weight: 700; }
@@ -122,13 +124,16 @@
   /* ---------- Tables ---------- */
   .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
   .section-head h2 { font-size: 16px; margin: 0; }
-  .section-head a { font-size: 13px; color: var(--nonorganic); text-decoration: none; font-weight: 600; }
+  .section-head a { font-size: 13px; color: var(--nonorganic); text-decoration: none; font-weight: 600; cursor: pointer; }
+  .section-head a:hover { text-decoration: underline; }
 
   table { width: 100%; border-collapse: collapse; }
   th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--border); }
   td { padding: 10px; font-size: 13px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
-  .thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; background: #eef0f4; display: block; }
+  .thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; background: #eef0f4; display: block; cursor: pointer; transition: transform .15s; }
+  .thumb:hover { transform: scale(1.08); }
+  .thumb-empty { width: 44px; height: 44px; border-radius: 8px; background: #eef0f4; }
   .badge { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
   .badge.ORGANIC { background: var(--organic-bg); color: var(--organic); }
   .badge.NON_ORGANIC { background: var(--nonorganic-bg); color: var(--nonorganic); }
@@ -146,6 +151,43 @@
 
   .footer { text-align: center; font-size: 12px; color: var(--muted); padding: 24px 0 8px; }
   .empty { color: var(--muted); font-size: 13px; padding: 12px 0; }
+
+  /* ---------- Modal / Popup ---------- */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(15,17,23,.55);
+    z-index: 1000; align-items: flex-start; justify-content: center; padding: 60px 16px;
+    overflow-y: auto;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: #fff; border-radius: 16px; width: 100%; max-width: 640px;
+    max-height: calc(100vh - 120px); display: flex; flex-direction: column; overflow: hidden;
+  }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--border); }
+  .modal-head h3 { margin: 0; font-size: 16px; }
+  .modal-close { background: #f0f1f5; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 16px; color: var(--muted); }
+  .modal-close:hover { background: #e6e8ee; }
+  .modal-body { padding: 8px 20px 20px; overflow-y: auto; }
+  .modal-body table td, .modal-body table th { padding: 10px 8px; }
+
+  /* Lightbox gambar */
+  .lightbox-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.8);
+    z-index: 1100; align-items: center; justify-content: center; padding: 24px; cursor: zoom-out;
+  }
+  .lightbox-overlay.open { display: flex; }
+  .lightbox-overlay img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+
+  /* Bell popup */
+  .bell-popup {
+    display: none; position: absolute; top: 48px; right: 0; width: 340px; max-height: 420px;
+    background: #fff; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 12px 32px rgba(20,20,30,.15);
+    overflow-y: auto; z-index: 500;
+  }
+  .bell-popup.open { display: block; }
+  .bell-wrap { position: relative; }
+  .bell-popup-head { padding: 14px 16px; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 14px; }
+  .bell-popup-body { padding: 4px 16px; }
 </style>
 </head>
 <body>
@@ -156,7 +198,13 @@
     <h1>Dashboard Monitoring SmartBin</h1>
     <div class="topbar-right">
       <span class="pill offline" id="conn-pill"><span class="dot"></span>Menghubungkan...</span>
-      <div class="bell">🔔<span class="badge" id="notif-count">0</span></div>
+      <div class="bell-wrap">
+        <div class="bell" id="bell-btn">🔔<span class="badge" id="notif-count">0</span></div>
+        <div class="bell-popup" id="bell-popup">
+          <div class="bell-popup-head">Notifikasi Terbaru</div>
+          <div class="bell-popup-body" id="bell-popup-body"><div class="empty">Memuat...</div></div>
+        </div>
+      </div>
       <div class="profile">
         <div class="avatar">P</div>
         <div>
@@ -245,7 +293,7 @@
           <span class="time-pill" id="chart-time-pill">--:--</span>
         </div>
       </div>
-      <canvas id="capacityChart"></canvas>
+      <div class="chart-box"><canvas id="capacityChart"></canvas></div>
     </div>
 
     <div class="card">
@@ -278,15 +326,15 @@
     </div>
   </div>
 
-  <!-- ================= LIVE CAMERA + YOLO ================= -->
+  <!-- ================= LIVE CAMERA + YOLO (diperkecil) ================= -->
   <div class="grid" style="grid-template-columns: 1fr;">
-    <div class="card">
+    <div class="card camera-card">
       <div class="card-head">
         <div class="left">
-          <div class="icon-box p">🎥</div>
+          <div class="icon-box p" style="width:30px;height:30px;font-size:14px;">🎥</div>
           <div>
-            <div class="title">Live Camera + YOLO Detection</div>
-            <div class="subtitle">Preview kamera real-time dengan bounding box klasifikasi</div>
+            <div class="title" style="font-size:13px;">Live Camera + YOLO Detection</div>
+            <div class="subtitle" style="font-size:11px;">Preview real-time</div>
           </div>
         </div>
         <span class="live-dot"><span class="d"></span>LIVE</span>
@@ -304,7 +352,7 @@
     <div class="card">
       <div class="section-head">
         <h2>Riwayat Klasifikasi Terbaru</h2>
-        <a href="#" onclick="return false;">Lihat Semua</a>
+        <a id="open-detections-modal">Lihat Semua</a>
       </div>
       <table>
         <thead>
@@ -319,13 +367,51 @@
     <div class="card">
       <div class="section-head">
         <h2>Notifikasi Terbaru</h2>
-        <a href="#" onclick="return false;">Lihat Semua</a>
+        <a id="open-events-modal">Lihat Semua</a>
       </div>
       <div id="events-list"><div class="empty">Memuat data...</div></div>
     </div>
   </div>
 
   <div class="footer">© 2026 SmartBin System. All rights reserved.</div>
+</div>
+
+<!-- ================= MODAL: Riwayat Klasifikasi (Lihat Semua) ================= -->
+<div class="modal-overlay" id="detections-modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>Semua Riwayat Klasifikasi</h3>
+      <button class="modal-close" data-close="detections-modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <table>
+        <thead>
+          <tr><th>Waktu</th><th>Gambar</th><th>Klasifikasi</th><th>Jenis</th><th>Confidence</th></tr>
+        </thead>
+        <tbody id="detections-modal-body">
+          <tr><td colspan="5" class="empty">Memuat data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: Notifikasi (Lihat Semua) ================= -->
+<div class="modal-overlay" id="events-modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>Semua Notifikasi</h3>
+      <button class="modal-close" data-close="events-modal">✕</button>
+    </div>
+    <div class="modal-body" id="events-modal-body">
+      <div class="empty">Memuat data...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= LIGHTBOX GAMBAR ================= -->
+<div class="lightbox-overlay" id="lightbox">
+  <img id="lightbox-img" src="" alt="Preview gambar">
 </div>
 
 <script>
@@ -338,16 +424,55 @@ function fmtTime(iso) {
   const d = new Date(iso);
   return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
+function fmtDateTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleString('id-ID', { hour12: false });
+}
 
 function setStatusTag(el, status) {
   el.textContent = status;
-  el.className = 'status-tag';
-  el.classList.add(status.replace(/\s/g, '_'));
-  if (status === 'Aman' || status === 'Sedang' || status === 'Penuh') {
-    el.classList.remove(status.replace(/\s/g,'_'));
-    el.classList.add(status);
-  }
+  el.className = 'status-tag ' + status.replace(/\s/g, '_');
 }
+
+/* ---------------- Modal & Lightbox helpers ---------------- */
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-close').forEach(btn => {
+  btn.addEventListener('click', () => closeModal(btn.dataset.close));
+});
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('open'); });
+});
+
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+document.getElementById('lightbox').addEventListener('click', () => {
+  document.getElementById('lightbox').classList.remove('open');
+});
+
+/* Bell popup toggle */
+const bellBtn = document.getElementById('bell-btn');
+const bellPopup = document.getElementById('bell-popup');
+bellBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  bellPopup.classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+  if (!bellPopup.contains(e.target) && e.target !== bellBtn) bellPopup.classList.remove('open');
+});
+
+document.getElementById('open-detections-modal').addEventListener('click', () => {
+  openModal('detections-modal');
+  loadDetectionsModal();
+});
+document.getElementById('open-events-modal').addEventListener('click', () => {
+  openModal('events-modal');
+  loadEventsModal();
+});
+
+/* ---------------- Data fetchers ---------------- */
 
 async function refreshStatus() {
   try {
@@ -412,30 +537,57 @@ async function refreshStatus() {
   } catch (e) { console.error(e); }
 }
 
+function detectionRowHtml(r) {
+  const filename = r.image_path ? r.image_path.split(/[\\/]/).pop() : null;
+  const src = filename ? `/captures/${filename}` : null;
+  const img = src
+    ? `<img class="thumb" src="${src}" onclick="openLightbox('${src}')">`
+    : `<div class="thumb-empty"></div>`;
+  const label = r.raw_label ? (r.raw_label.charAt(0).toUpperCase() + r.raw_label.slice(1)) : JENIS_LABEL[r.classification];
+  const conf = r.confidence != null ? (r.confidence*100).toFixed(1) + '%' : '-';
+  return `
+    <tr>
+      <td>${fmtTime(r.timestamp)}</td>
+      <td>${img}</td>
+      <td>${label}</td>
+      <td><span class="badge ${r.classification}">${JENIS_LABEL[r.classification] ?? r.classification}</span></td>
+      <td>${conf}</td>
+    </tr>`;
+}
+
 async function refreshDetections() {
   try {
     const res = await fetch('/api/detections');
     const rows = await res.json();
-
     const body = document.getElementById('detections-body');
     if (rows.length === 0) {
       body.innerHTML = '<tr><td colspan="5" class="empty">Belum ada data</td></tr>';
       return;
     }
-    body.innerHTML = rows.slice(0, 8).map(r => {
-      const img = r.image_path ? `<img class="thumb" src="/captures/${r.image_path.split(/[\\/]/).pop()}">` : `<div class="thumb"></div>`;
-      const label = r.raw_label ? (r.raw_label.charAt(0).toUpperCase() + r.raw_label.slice(1)) : JENIS_LABEL[r.classification];
-      const conf = r.confidence != null ? (r.confidence*100).toFixed(1) + '%' : '-';
-      return `
-      <tr>
-        <td>${fmtTime(r.timestamp)}</td>
-        <td>${img}</td>
-        <td>${label}</td>
-        <td><span class="badge ${r.classification}">${JENIS_LABEL[r.classification] ?? r.classification}</span></td>
-        <td>${conf}</td>
-      </tr>`;
-    }).join('');
+    body.innerHTML = rows.slice(0, 8).map(detectionRowHtml).join('');
   } catch (e) { console.error(e); }
+}
+
+async function loadDetectionsModal() {
+  try {
+    const res = await fetch('/api/detections');
+    const rows = await res.json();
+    const body = document.getElementById('detections-modal-body');
+    body.innerHTML = rows.length === 0
+      ? '<tr><td colspan="5" class="empty">Belum ada data</td></tr>'
+      : rows.map(detectionRowHtml).join('');
+  } catch (e) { console.error(e); }
+}
+
+function notifItemHtml(r, showDot) {
+  return `
+    <div class="notif-item">
+      <div class="notif-icon ${r.level}">${NOTIF_ICON[r.level] ?? 'ℹ️'}</div>
+      <div>
+        <div class="notif-title">${r.message}${showDot ? '<span class="red-dot"></span>' : ''}</div>
+        <div class="notif-sub">${fmtDateTime(r.timestamp)}</div>
+      </div>
+    </div>`;
 }
 
 async function refreshEvents() {
@@ -444,8 +596,11 @@ async function refreshEvents() {
     const rows = await res.json();
 
     const list = document.getElementById('events-list');
+    const bellList = document.getElementById('bell-popup-body');
+
     if (rows.length === 0) {
       list.innerHTML = '<div class="empty">Belum ada notifikasi</div>';
+      bellList.innerHTML = '<div class="empty">Belum ada notifikasi</div>';
       document.getElementById('notif-count').textContent = '0';
       return;
     }
@@ -453,14 +608,20 @@ async function refreshEvents() {
     const unread = rows.filter(r => r.level === 'WARNING' || r.level === 'ERROR').length;
     document.getElementById('notif-count').textContent = unread;
 
-    list.innerHTML = rows.slice(0, 6).map((r, idx) => `
-      <div class="notif-item">
-        <div class="notif-icon ${r.level}">${NOTIF_ICON[r.level] ?? 'ℹ️'}</div>
-        <div>
-          <div class="notif-title">${r.message}${idx === 0 && (r.level==='WARNING'||r.level==='ERROR') ? '<span class="red-dot"></span>' : ''}</div>
-          <div class="notif-sub">${fmtTime(r.timestamp)}</div>
-        </div>
-      </div>`).join('');
+    const htmlRows = rows.slice(0, 6).map((r, idx) => notifItemHtml(r, idx === 0 && (r.level==='WARNING'||r.level==='ERROR')));
+    list.innerHTML = htmlRows.join('');
+    bellList.innerHTML = rows.slice(0, 8).map((r, idx) => notifItemHtml(r, idx === 0 && (r.level==='WARNING'||r.level==='ERROR'))).join('');
+  } catch (e) { console.error(e); }
+}
+
+async function loadEventsModal() {
+  try {
+    const res = await fetch('/api/events');
+    const rows = await res.json();
+    const body = document.getElementById('events-modal-body');
+    body.innerHTML = rows.length === 0
+      ? '<div class="empty">Belum ada notifikasi</div>'
+      : rows.map(r => notifItemHtml(r, false)).join('');
   } catch (e) { console.error(e); }
 }
 
@@ -484,12 +645,14 @@ async function refreshChart() {
         data: {
           labels,
           datasets: [
-            { label: 'Organik', data: organicData, borderColor: '#22a55e', backgroundColor: 'transparent', tension: 0.35, pointRadius: 3 },
-            { label: 'Anorganik', data: nonorganicData, borderColor: '#3b82f6', backgroundColor: 'transparent', tension: 0.35, pointRadius: 3 },
+            { label: 'Organik', data: organicData, borderColor: '#22a55e', backgroundColor: 'transparent', tension: 0.35, pointRadius: 3, spanGaps: true },
+            { label: 'Anorganik', data: nonorganicData, borderColor: '#3b82f6', backgroundColor: 'transparent', tension: 0.35, pointRadius: 3, spanGaps: true },
           ]
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
           plugins: { legend: { display: false } },
           scales: { y: { min: 0, max: 100, ticks: { stepSize: 25 } } }
         }
@@ -498,7 +661,7 @@ async function refreshChart() {
       chart.data.labels = labels;
       chart.data.datasets[0].data = organicData;
       chart.data.datasets[1].data = nonorganicData;
-      chart.update();
+      chart.update('none');
     }
   } catch (e) { console.error(e); }
 }

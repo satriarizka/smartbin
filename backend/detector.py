@@ -201,7 +201,9 @@ class Detector:
         momen sampah benar-benar berada di depan kamera.
 
         Tidak ada fallback/default classification. Jika tidak ada objek
-        dengan confidence >= CONF_THRESHOLD, classification = None.
+        dengan confidence >= CONF_THRESHOLD, classification = None dan
+        TIDAK ADA FILE YANG DISIMPAN (frame anotasi dikembalikan mentah,
+        pemanggil yang memutuskan apakah perlu disimpan via save_capture()).
         """
         with self._lock:
             if self._latest_frame is None:
@@ -209,14 +211,19 @@ class Detector:
             frame = self._latest_frame.copy()
 
         annotated, result = self._infer(frame)
+        result["_annotated_frame"] = annotated   # internal, jangan di-JSON-kan
+        return result
 
+    def save_capture(self, annotated_frame):
+        """Simpan frame anotasi ke disk. Panggil ini HANYA kalau hasil
+        klasifikasi memang mau dicatat (bukan UNKNOWN), supaya folder
+        captures/ tidak dipenuhi gambar percobaan yang gagal terdeteksi.
+        """
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"capture_{timestamp}.jpg"
         filepath = os.path.join(CAPTURE_DIR, filename)
-        cv2.imwrite(filepath, annotated)
-
-        result["image_path"] = os.path.relpath(filepath, os.path.dirname(__file__))
-        return result
+        cv2.imwrite(filepath, annotated_frame)
+        return os.path.relpath(filepath, os.path.dirname(__file__))
 
     def get_mjpeg_frame(self):
         """Kembalikan bytes JPEG terbaru (untuk endpoint streaming /video_feed)."""
