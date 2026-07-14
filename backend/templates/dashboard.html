@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>SmartBin - Dashboard Monitoring</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <style>
   :root {
     --organic: #22a55e;
@@ -94,6 +93,7 @@
   .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
   .time-pill { background: var(--organic); color: #fff; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 999px; }
   .chart-box { position: relative; height: 260px; width: 100%; }
+  .chart-box canvas { width: 100%; height: 100%; display: block; }
 
   /* ---------- Status realtime & peringatan ---------- */
   .status-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
@@ -113,10 +113,11 @@
   .alert-box.safe .title, .alert-box.safe .msg { color: #1b7a45; }
 
   /* ---------- Live camera (diperkecil, tidak full width) ---------- */
-  .camera-card { max-width: 420px; }
+  .camera-card { max-width: 720px; }
+  .camera-card .camera-frame { max-height: 480px; }
   .camera-frame { width: 100%; border-radius: 12px; background: #0c0e14; display: block; aspect-ratio: 4/3; object-fit: cover; }
-  .camera-footer { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; font-size: 12px; color: var(--muted); }
-  .live-dot { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--danger); font-size: 12px; }
+  .camera-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; font-size: 13px; color: var(--muted); }
+  .live-dot { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--danger); }
   .live-dot span.d { width: 7px; height: 7px; border-radius: 50%; background: var(--danger); animation: pulse 1.4s infinite; }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
   .conf-badge { font-weight: 700; }
@@ -326,15 +327,15 @@
     </div>
   </div>
 
-  <!-- ================= LIVE CAMERA + YOLO (diperkecil) ================= -->
+  <!-- ================= LIVE CAMERA + YOLO ================= -->
   <div class="grid" style="grid-template-columns: 1fr;">
     <div class="card camera-card">
       <div class="card-head">
         <div class="left">
-          <div class="icon-box p" style="width:30px;height:30px;font-size:14px;">🎥</div>
+          <div class="icon-box p">🎥</div>
           <div>
-            <div class="title" style="font-size:13px;">Live Camera + YOLO Detection</div>
-            <div class="subtitle" style="font-size:11px;">Preview real-time</div>
+            <div class="title">Live Camera + YOLO Detection</div>
+            <div class="subtitle">Preview kamera real-time dengan bounding box klasifikasi</div>
           </div>
         </div>
         <span class="live-dot"><span class="d"></span>LIVE</span>
@@ -417,8 +418,6 @@
 <script>
 const JENIS_LABEL = { ORGANIC: 'Organik', NON_ORGANIC: 'Anorganik', UNKNOWN: 'Tidak Diketahui' };
 const NOTIF_ICON = { WARNING: '⚠️', ERROR: '⛔', INFO: 'ℹ️' };
-
-let chart;
 
 function fmtTime(iso) {
   const d = new Date(iso);
@@ -625,44 +624,124 @@ async function loadEventsModal() {
   } catch (e) { console.error(e); }
 }
 
+/* ---------------- Grafik native (Canvas API, tanpa library eksternal) ---------------- */
+
+function drawLineChart(canvas, labels, seriesList) {
+  // seriesList: [{ data: [...], color: '#22a55e' }, ...] nilai 0-100 atau null (gap)
+  const dpr = window.devicePixelRatio || 1;
+  const cssWidth = canvas.clientWidth;
+  const cssHeight = canvas.clientHeight;
+  if (cssWidth === 0 || cssHeight === 0) return;
+
+  canvas.width = cssWidth * dpr;
+  canvas.height = cssHeight * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+  const padL = 34, padR = 10, padT = 10, padB = 24;
+  const plotW = cssWidth - padL - padR;
+  const plotH = cssHeight - padT - padB;
+
+  if (plotW <= 0 || plotH <= 0) return;
+
+  // Sumbu Y 0-100, grid tiap 25
+  ctx.strokeStyle = '#edeff3';
+  ctx.fillStyle = '#8891a5';
+  ctx.font = '11px -apple-system, Segoe UI, Roboto, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.lineWidth = 1;
+
+  const steps = [0, 25, 50, 75, 100];
+  steps.forEach(v => {
+    const y = padT + plotH - (v / 100) * plotH;
+    ctx.beginPath();
+    ctx.moveTo(padL, y);
+    ctx.lineTo(padL + plotW, y);
+    ctx.stroke();
+    ctx.fillText(String(v), padL - 8, y);
+  });
+
+  if (!labels || labels.length === 0) {
+    ctx.textAlign = 'center';
+    ctx.fillText('Belum ada data', padL + plotW / 2, padT + plotH / 2);
+    return;
+  }
+
+  const n = labels.length;
+  const xAt = (i) => padL + (n === 1 ? plotW / 2 : (plotW * i) / (n - 1));
+
+  // Label sumbu X (tampilkan maks ~6 label supaya tidak numpuk)
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  const labelEvery = Math.max(1, Math.ceil(n / 6));
+  labels.forEach((lb, i) => {
+    if (i % labelEvery === 0 || i === n - 1) {
+      ctx.fillText(lb, xAt(i), padT + plotH + 6);
+    }
+  });
+
+  // Gambar tiap seri
+  seriesList.forEach(series => {
+    ctx.strokeStyle = series.color;
+    ctx.fillStyle = series.color;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+
+    let started = false;
+    series.data.forEach((v, i) => {
+      const x = xAt(i);
+      if (v === null || v === undefined) { started = false; return; }
+      const y = padT + plotH - (v / 100) * plotH;
+      if (!started) { ctx.moveTo(x, y); started = true; }
+      else { ctx.lineTo(x, y); }
+    });
+    ctx.stroke();
+
+    // Titik data
+    series.data.forEach((v, i) => {
+      if (v === null || v === undefined) return;
+      const x = xAt(i);
+      const y = padT + plotH - (v / 100) * plotH;
+      ctx.beginPath();
+      ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  });
+}
+
+let lastChartData = null;
+
+function redrawChart() {
+  if (!lastChartData) return;
+  const canvas = document.getElementById('capacityChart');
+  drawLineChart(canvas, lastChartData.labels, [
+    { data: lastChartData.organicData, color: '#22a55e' },
+    { data: lastChartData.nonorganicData, color: '#3b82f6' },
+  ]);
+}
+
 async function refreshChart() {
   try {
     const res = await fetch('/api/levels');
     const rows = await res.json();
 
     const labels = rows.map(r => fmtTime(r.timestamp));
-    const organicData = rows.map(r => r.organic_pct);
-    const nonorganicData = rows.map(r => r.nonorganic_pct);
+    const organicData = rows.map(r => r.organic_pct ?? null);
+    const nonorganicData = rows.map(r => r.nonorganic_pct ?? null);
 
     if (labels.length > 0) {
       document.getElementById('chart-time-pill').textContent = labels[labels.length - 1];
     }
 
-    if (!chart) {
-      const ctx = document.getElementById('capacityChart').getContext('2d');
-      chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [
-            { label: 'Organik', data: organicData, borderColor: '#22a55e', backgroundColor: 'transparent', tension: 0.35, pointRadius: 3, spanGaps: true },
-            { label: 'Anorganik', data: nonorganicData, borderColor: '#3b82f6', backgroundColor: 'transparent', tension: 0.35, pointRadius: 3, spanGaps: true },
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          animation: false,
-          plugins: { legend: { display: false } },
-          scales: { y: { min: 0, max: 100, ticks: { stepSize: 25 } } }
-        }
-      });
-    } else {
-      chart.data.labels = labels;
-      chart.data.datasets[0].data = organicData;
-      chart.data.datasets[1].data = nonorganicData;
-      chart.update('none');
-    }
+    lastChartData = { labels, organicData, nonorganicData };
+    redrawChart();
+  } catch (e) { console.error(e); }
+}
+
+window.addEventListener('resize', redrawChart);
   } catch (e) { console.error(e); }
 }
 
